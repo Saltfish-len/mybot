@@ -16,17 +16,22 @@ class Chatbot:
         if set(msgcopy) == set(" ") or len(msgcopy) == 0:
             return "@我干嘛？"
         msg = msg[1:]
-        if msg == "可以涩涩":
-            self.yinglish = True
-            command = msg.split()
-            if len(command) == 2:
-                try:
-                    level = float(command[1])
-                    self.yinglevel = level
-                except:
-                    return "涩涩指令格式：可以涩涩 <淫乱度 选填 0~1小数>"
+        if "可以涩涩" in msg:
+            if msg[:4] == "可以涩涩":
+                self.yinglish = True
+                command = msg.split()
+                if len(command) == 2:
+                    try:
+                        level = float(command[1])
+                        self.yinglevel = level
+                    except:
+                        return "涩涩指令格式：可以涩涩 <淫乱度 选填 0~1小数>"
+                return "调教成功"
         if msg == "不可以涩涩":
             self.yinglish = False
+            return "似乎恢复理智了呢"
+        if msg == "涩涩状态":
+            return ''.join([str(self.yinglish),str(self.yinglevel)])
         sess = requests.get(
             ('https://open.drea.cc/bbsapi/chat/get?keyWord=' + msg + '&userName=type%3Dbbs'))
         js = sess.text

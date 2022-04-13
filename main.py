@@ -9,7 +9,7 @@ from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, At
 from graia.ariadne.model import Friend, Group, MiraiSession, Member
 
-from chatbot import *
+import chatbot as ct
 
 import random
 
@@ -17,9 +17,12 @@ loop = asyncio.new_event_loop()
 
 host = input("请输入HTTP API地址:")
 verifykey = input("请输入verifykey：")
+account = int(input("请输入QQ账号："))
 
 if host == '':
     host = "http://127.0.0.1:8080"
+if account == '':
+    account = 2706192373
 
 broadcast = Broadcast(loop=loop)
 app = Ariadne(
@@ -27,14 +30,14 @@ app = Ariadne(
     connect_info=MiraiSession(
         host=host,  # 填入 HTTP API 服务运行的地址
         verify_key=verifykey,  # 填入 verifyKey
-        account=2706192373,  # 你的机器人的 qq 号
+        account=account,  # 你的机器人的 qq 号
     )
 )
 
 bcc = app.broadcast
 app.count = 0
 
-bot = Chatbot()
+bot = ct.Chatbot()
 
 @bcc.receiver(GroupMessage)
 async def groupchat(app: Ariadne, group: Group, member: Member, messageChain: MessageChain):
@@ -49,7 +52,7 @@ async def groupchat(app: Ariadne, group: Group, member: Member, messageChain: Me
         else:
             await app.sendMessage(
                 group,
-                MessageChain.create(Chatbot.chat(bot,messageChain)),
+                MessageChain.create(ct.Chatbot.chat(bot,messageChain)),
             )
 
 
