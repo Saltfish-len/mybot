@@ -17,12 +17,14 @@ loop = asyncio.new_event_loop()
 
 host = input("请输入HTTP API地址:")
 verifykey = input("请输入verifykey：")
-account = int(input("请输入QQ账号："))
+account = input("请输入QQ账号：")
 
 if host == '':
     host = "http://127.0.0.1:8080"
 if account == '':
     account = 2706192373
+else:
+    account = int(account)
 
 broadcast = Broadcast(loop=loop)
 app = Ariadne(
@@ -52,7 +54,7 @@ async def groupchat(app: Ariadne, group: Group, member: Member, messageChain: Me
         else:
             await app.sendMessage(
                 group,
-                MessageChain.create(ct.Chatbot.chat(bot,messageChain)),
+                ct.Chatbot.chat(bot,messageChain),
             )
 
 
@@ -74,7 +76,7 @@ async def getup(app: Ariadne, event: NudgeEvent):
             app.count = 0
             await app.sendGroupMessage(
                 event.group_id,
-                MessageChain.create("……？")
+                MessageChain.create("戳尼玛戳，莫挨老子！")
             )
 
     elif event.context_type == "friend" and event.target == 2706192373:
