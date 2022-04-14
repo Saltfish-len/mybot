@@ -1,12 +1,17 @@
+import asyncio
+import time
+
 import requests
 import json
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain
 from yinglish import chs2yin
-
+from graia.ariadne.model import Member
+from graia.ariadne.message.element import Plain, At, Image
 
 class Chatbot:
     def __init__(self):
+        self.session = None
         self.yinglish = False
         self.yinglevel = 0.5
 
@@ -31,16 +36,19 @@ class Chatbot:
             self.yinglish = False
             return "似乎恢复理智了呢"
         if msg == "涩涩状态":
-            return ''.join([str(self.yinglish),str(self.yinglevel)])
+            return ''.join([str(self.yinglish), str(self.yinglevel)])
         sess = requests.get(
             ('http://api.qingyunke.com/api.php?key=free&appid=0&msg=' + msg))
         js = sess.text
         js = json.loads(js)
         if js['result'] == 0:
             res = js['content']
+            res = res.replace("菲菲","RBQ")
+            res = res.replace("双字菲", "RBQ")
         else:
-            return  "被玩坏了啦，请联系管理"
+            return "被玩坏了啦，请联系管理"
         if self.yinglish:
             return chs2yin(res, self.yinglevel)
         else:
             return res
+
