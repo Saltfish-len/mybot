@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import requests, json
 from graia.ariadne import get_running
@@ -10,7 +11,7 @@ from graia.broadcast import Broadcast
 from graia.ariadne.app import Ariadne
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, At, Image
-from graia.ariadne.message.parser.base import MentionMe, DetectPrefix
+from graia.ariadne.message.parser.base import MentionMe, DetectPrefix, ContainKeyword
 from graia.ariadne.model import Friend, Group, MiraiSession, Member
 
 import chatbot as ct
@@ -45,16 +46,38 @@ app.count = 0
 
 bot = ct.Chatbot()
 
+setucold = dict()
 
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[ContainKeyword(keyword="rbq")]
+)
+async def rbq(app: Ariadne, group: Group, member: Member, message: MessageChain):
+    reslist = ["rbq? 什么rbq?", "rbq?! 有人叫我？", "你刚刚说了rbq是吗，哈哈，没错就是我！", "rbq rbq, 你才是rbq呢！"]
+    await app.sendMessage(
+        group,
+        MessageChain.create(At(member), "\n" + reslist[random.randint(0, len(reslist) - 1)]),
+    )
 
 @bcc.receiver(
     GroupMessage,
     decorators=[DetectPrefix("涩图")]
 )
 async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain = DetectPrefix("涩图")):
+    tgroup = tuple(group)
+    if tgroup not in setucold:
+        setucold[tgroup] = 0
+    if time.time() - setucold[tgroup] <= 15:
+        reslist = ["才三秒，你就冲完了？", "冲这么快小心牛牛会爆炸哦~", "哼，不给你看~", "你怎么冲的到处都是！", "好烦啊，你怎么又发情了", "再冲这么快小心被雌堕哦~"]
+        await app.sendMessage(
+            group,
+            MessageChain.create(At(member), "\n" + reslist[random.randint(0, len(reslist) - 1)]),
+        )
+        return
     await app.sendMessage(
         group,
-        MessageChain.create(At(member),"\n少女祈祷中ing"),
+        MessageChain.create(At(member), "\n少女祈祷中ing"),
     )
     option = '0'
     endure = 10
@@ -72,7 +95,8 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
             MessageChain.create("呜呜呜找不到涩图"),
         )
         return
-    imginfo = "标题: "+js["data"][0]["title"]+"\n"+"pid: "+str(js["data"][0]["pid"])+"\n作者: "+js["data"][0]["author"]+"\nuid: "+str(js["data"][0]["uid"])+"\nlink: "+js["data"][0]["urls"]["original"]
+    imginfo = "标题: " + js["data"][0]["title"] + "\n" + "pid: " + str(js["data"][0]["pid"]) + "\n作者: " + js["data"][0][
+        "author"] + "\nuid: " + str(js["data"][0]["uid"]) + "\n原图链接: " + js["data"][0]["urls"]["original"]
     await app.sendMessage(
         group,
         MessageChain.create(imginfo),
@@ -86,6 +110,7 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
             group,
             MessageChain.create(Image(data_bytes=imgdata)),
         )
+        setucold[tgroup] = time.time()
         await asyncio.sleep(endure)
         await app.recallMessage(msg)
     except:
@@ -93,7 +118,6 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
             group,
             MessageChain.create("图片加载失败qwq"),
         )
-
 
 
 @bcc.receiver(
