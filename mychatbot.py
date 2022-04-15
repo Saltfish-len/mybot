@@ -48,12 +48,11 @@ class Chatbot:
                 ('http://api.qingyunke.com/api.php?key=free&appid=0&msg=' + msg))
             js = sess.text
             js = json.loads(js)
-            if js['result'] == 0:
-                res = js['content']
-                res = res.replace("菲菲","RBQ")
-                res = res.replace("双字菲", "RBQ")
+            res = js['content']
+            res = res.replace("菲菲","RBQ")
+            res = res.replace("双字菲", "RBQ")
         except:
-            return "被玩坏了啦，请联系管理"
+            res =  "被玩坏了啦，请联系管理"
         if self.yinglish:
             return chs2yin(res, self.yinglevel)
         else:
@@ -64,5 +63,5 @@ class Chatbot:
             msg[i] = simplify_pinyin(one_pinyin)
             if not is_pinyin(msg[i]):
                 return False
-        result =  dag(dagparams, msg, path_num=1)
-        return "".join(result[0].path)
+        result =  dag(dagparams, msg, path_num=2)
+        return "".join(result[0].path)+"\n或者："+"".join(result[1].path)
