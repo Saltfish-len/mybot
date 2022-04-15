@@ -14,7 +14,7 @@ from graia.ariadne.message.element import Plain, At, Image
 from graia.ariadne.message.parser.base import MentionMe, DetectPrefix, ContainKeyword
 from graia.ariadne.model import Friend, Group, MiraiSession, Member
 
-import chatbot as ct
+import mychatbot as ct
 
 import random
 
@@ -49,6 +49,18 @@ bot = ct.Chatbot()
 setucold = dict()
 
 
+@bcc.receiver(GroupMessage)
+async def py2ch(app: Ariadne, group: Group, member: Member, message: MessageChain):
+    msg = str(message.get(Plain))[13:-3]
+    if msg.islower():
+        res = bot.pinyin2hanzi(msg.split(" "))
+        if res:
+            await app.sendMessage(
+                group,
+                MessageChain.create("他说：" + res),
+            )
+
+
 @bcc.receiver(
     GroupMessage,
     decorators=[ContainKeyword(keyword="rbq")]
@@ -59,6 +71,7 @@ async def rbq(app: Ariadne, group: Group, member: Member, message: MessageChain)
         group,
         MessageChain.create(At(member), "\n" + reslist[random.randint(0, len(reslist) - 1)]),
     )
+
 
 @bcc.receiver(
     GroupMessage,
