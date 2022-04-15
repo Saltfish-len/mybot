@@ -1,6 +1,12 @@
 import asyncio
 import time
 
+from Pinyin2Hanzi import DefaultHmmParams, DefaultDagParams
+from Pinyin2Hanzi import viterbi, dag
+from Pinyin2Hanzi import is_pinyin, simplify_pinyin
+hmmparams = DefaultHmmParams()
+dagparams = DefaultDagParams()
+
 import requests
 import json
 from graia.ariadne.message.chain import MessageChain
@@ -37,18 +43,26 @@ class Chatbot:
             return "似乎恢复理智了呢"
         if msg == "涩涩状态":
             return ''.join([str(self.yinglish), str(self.yinglevel)])
-        sess = requests.get(
-            ('http://api.qingyunke.com/api.php?key=free&appid=0&msg=' + msg))
-        js = sess.text
-        js = json.loads(js)
-        if js['result'] == 0:
-            res = js['content']
-            res = res.replace("菲菲","RBQ")
-            res = res.replace("双字菲", "RBQ")
-        else:
+        try:
+            sess = requests.get(
+                ('http://api.qingyunke.com/api.php?key=free&appid=0&msg=' + msg))
+            js = sess.text
+            js = json.loads(js)
+            if js['result'] == 0:
+                res = js['content']
+                res = res.replace("菲菲","RBQ")
+                res = res.replace("双字菲", "RBQ")
+        except:
             return "被玩坏了啦，请联系管理"
         if self.yinglish:
             return chs2yin(res, self.yinglevel)
         else:
             return res
 
+    def pinyin2hanzi(self, msg):
+        for i, one_pinyin in enumerate(msg):
+            msg[i] = simplify_pinyin(one_pinyin)
+            if not is_pinyin(msg[i]):
+                return False
+        result =  dag(dagparams, msg, path_num=1)
+        return "".join(result[0].path)
