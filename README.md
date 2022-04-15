@@ -5,3 +5,6 @@ myqqbot
 很可能以后会remake
 用的框架是mirai
 就酱
+# Improtant！
+你需要把它放到mychatbot用一个文件夹
+https://github.com/letiantian/Pinyin2Hanzi/tree/master/Pinyin2Hanzi
