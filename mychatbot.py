@@ -105,7 +105,7 @@ class Wmh:
             await self.app.sendMessage(self.group, MessageChain.create("狼人胜利~"))
         else:
             return
-        temp = ["玩家编号|名称"]
+        temp = ["身份|名称"]
         for i, player in enumerate(self.player_list):
             temp.append("角色：" + str(self.originalrole[i].name) + " | " + str(player.name))
         await self.app.sendMessage(self.group, MessageChain.create("\n".join(temp)))
@@ -140,7 +140,7 @@ class Wmh:
         return groupmsg, msg, roles
 
     def assign_roles(self) -> [Member, MessageChain]:
-        roles_table = [(Role.werewolf,), (Role.prophet, Role.werewolf),
+        roles_table = [(Role.prophet,), (Role.prophet, Role.werewolf),
                        (Role.villager, Role.prophet, Role.werewolf),
                        (Role.villager, Role.villager, Role.werewolf, Role.prophet),
                        (Role.villager, Role.villager, Role.werewolf, Role.werewolf, Role.prophet),

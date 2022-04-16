@@ -150,6 +150,7 @@ async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = De
             msg = str(m.get(Plain))[13:-3]
             try:
                 targetid = int(msg)
+
                 return targetid  # 只要不是 None 就会继续执行
             except:
                 return Force(None)
@@ -200,6 +201,12 @@ async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = De
 
     try:
         res = await inc.wait(prophet_waiter, timeout=30)
+        if res == 0:
+            await app.sendMessage(
+                player,
+                MessageChain.create("预言失败")
+            )
+            return
         await app.sendMessage(
             player,
             MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))
@@ -280,6 +287,12 @@ async def langrensha(app: Ariadne, group: Group, member: Member,
                 MessageChain.create(At(member), "\n加入失败, 寄"),
             )
     if "开始游戏" in command:
+        if game.player_number == 0:
+            await app.sendMessage(
+                group,
+                MessageChain.create("输入“/狼人杀 新游戏”来加入游戏")
+            )
+            return
         gmsg, pmsg, roles = game.startgame()
         await app.sendMessage(
             group,
