@@ -133,7 +133,7 @@ async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = De
         await game.isnightfinish()
 
 
-@bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("杀人")])
+@bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("预言")])
 async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = DetectPrefix("/狼人杀")):
     if game.stage == 1:
         await app.sendMessage(player, MessageChain.create("光天化日之下不能预言"))
@@ -156,6 +156,12 @@ async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = De
 
     try:
         res = await inc.wait(prophet_waiter, timeout=30)
+        if res == 0:
+            await app.sendMessage(
+                player,
+                MessageChain.create("预言失败")
+            )
+            return
         await app.sendMessage(
             player,
             MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))

@@ -153,11 +153,16 @@ class Wmh:
         temp = []
         for i, player in enumerate(self.player_list):
             if self.role_list[i] != Role.deadman:
-                self.canactionlist.append(player.id)
                 temp.append([player, MessageChain.create("你的身份是：" + str(self.role_list[i].name))])
+            if self.role_list[i] != Role.deadman and self.role_list[i] != Role.villager:
+                self.canactionlist.append(player.id)
         return temp
 
     def night(self) -> [Member, MessageChain]:
+        self.canactionlist = []
+        for i, player in enumerate(self.player_list):
+            if self.role_list[i] != Role.deadman and self.role_list[i] != Role.villager:
+                self.canactionlist.append(player.id)
         self.stage = 0
         fmsg = []
         wolfmsg = MessageChain.create("你是狼人，请输入“/狼人杀 杀人”来投票杀人\n本局的狼人玩家：\n")
@@ -218,4 +223,8 @@ class Wmh:
         await self.whowin()
 
     def canact(self, member):
-        return member.id in self.canactionlist
+        if member.id in self.canactionlist:
+            self.canactionlist.remove(member.id)
+            return True
+        else:
+            return False
