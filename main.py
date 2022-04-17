@@ -20,6 +20,8 @@ import random
 
 from graia.broadcast.interrupt import InterruptControl
 from graia.broadcast.interrupt.waiter import Waiter
+import re
+
 
 loop = asyncio.new_event_loop()
 
@@ -227,7 +229,11 @@ async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = De
 @bcc.receiver(GroupMessage)
 async def py2ch(app: Ariadne, group: Group, member: Member, message: MessageChain):
     msg = str(message.get(Plain))[13:-3]
-    if msg.islower():
+    testmgs = msg
+    testmgs = testmgs.replace(" ", "")
+    test = re.compile(u'[\u4e00-\u9fa5]')
+    if testmgs.isalpha() and test.search(testmgs) is None:
+        msg = msg.lower()
         res = bot.pinyin2hanzi(msg.split(" "))
         if res:
             await app.sendMessage(

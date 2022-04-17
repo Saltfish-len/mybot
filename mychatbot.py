@@ -3,6 +3,7 @@ import time
 from enum import Enum
 import random
 
+
 from Pinyin2Hanzi import DefaultHmmParams, DefaultDagParams
 from Pinyin2Hanzi import viterbi, dag
 from Pinyin2Hanzi import is_pinyin, simplify_pinyin
@@ -70,12 +71,26 @@ class Chatbot:
             return res
 
     def pinyin2hanzi(self, msg):
+        keepmsg = []
         for i, one_pinyin in enumerate(msg):
             msg[i] = simplify_pinyin(one_pinyin)
             if not is_pinyin(msg[i]):
-                return False
+                keepmsg.append([i, msg.pop(i)])
+        if msg == []:
+            return False
         result = dag(dagparams, msg, path_num=2)
-        return "".join(result[0].path) + "\n或者：" + "".join(result[1].path)
+
+        def str_insert(str_origin, pos, str_add):
+            str_list = list(str_origin)  # 字符串转list
+            str_list.insert(pos, str_add)  # 在指定位置插入字符串
+            str_out = ''.join(str_list)  # 空字符连接
+            return str_out
+
+        result = ["".join(result[0].path), "".join(result[1].path)]
+        for char in keepmsg:
+            result[0] = str_insert(result[0], char[0], char[1])
+            result[1] = str_insert(result[1], char[0], char[1])
+        return result[0] + "\n或者：" + result[1]
 
 
 class Wmh:
@@ -230,7 +245,7 @@ class Wmh:
         else:
             await self.app.sendMessage(
                 self.group,
-                MessageChain.create(f"还有{votecount-len(self.role_list) + self.role_list.count(Role.deadman)}位玩家没有投票哦")
+                MessageChain.create(f"还有{votecount - len(self.role_list) + self.role_list.count(Role.deadman)}位玩家没有投票哦")
             )
         await self.whowin()
 
