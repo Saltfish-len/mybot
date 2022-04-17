@@ -97,20 +97,19 @@ class Wmh:
         self.__init__()
 
     async def whowin(self):
-        pass
-        # rolelist = self.role_list
-        # rolelist = set(rolelist)
-        # if Role.werewolf not in rolelist:
-        #     await self.app.sendMessage(self.group, MessageChain.create("平民胜利！！！"))
-        # elif Role.prophet not in rolelist and Role.villager not in rolelist:
-        #     await self.app.sendMessage(self.group, MessageChain.create("狼人胜利~"))
-        # else:
-        #     return
-        # temp = ["身份|名称"]
-        # for i, player in enumerate(self.player_list):
-        #     temp.append("角色：" + str(self.originalrole[i].name) + " | " + str(player.name))
-        # await self.app.sendMessage(self.group, MessageChain.create("\n".join(temp)))
-        # self.endgame()
+        rolelist = self.role_list
+        rolelist = set(rolelist)
+        if Role.werewolf not in rolelist:
+            await self.app.sendMessage(self.group, MessageChain.create("平民胜利！！！"))
+        elif Role.prophet not in rolelist and Role.villager not in rolelist:
+            await self.app.sendMessage(self.group, MessageChain.create("狼人胜利~"))
+        else:
+            return
+        temp = ["身份|名称"]
+        for i, player in enumerate(self.player_list):
+            temp.append("角色：" + str(self.originalrole[i].name) + " | " + str(player.name))
+        await self.app.sendMessage(self.group, MessageChain.create("\n".join(temp)))
+        self.endgame()
 
     def isingame(self):
         if self.ingame:
