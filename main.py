@@ -160,8 +160,9 @@ async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = De
         if res == 0:
             await app.sendMessage(
                 player,
-                MessageChain.create("预言失败")
+                MessageChain.create("放弃预言啦")
             )
+            game.killlist.append(0)
             return
         await app.sendMessage(
             player,
@@ -204,8 +205,9 @@ async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = De
         if res == 0:
             await app.sendMessage(
                 player,
-                MessageChain.create("预言失败")
+                MessageChain.create("放弃预言啦")
             )
+            game.killlist.append(0)
             return
         await app.sendMessage(
             player,
@@ -314,7 +316,7 @@ async def langrensha(app: Ariadne, group: Group, member: Member,
                 item[1]
             )
         # 入夜
-        wolf_msg_list, prophet_msg_list = game.night()
+        wolf_msg_list, prophet_msg_list = await game.night()
         for w in wolf_msg_list:
             await app.sendTempMessage(
                 w[0],
@@ -327,8 +329,12 @@ async def langrensha(app: Ariadne, group: Group, member: Member,
             )
     if "入夜" in command:
         if game.stage == 0:
+            await app.sendMessage(
+                group,
+                MessageChain.create(At(member), "\n已经在晚上啦"),
+            )
             return
-        wolf_msg_list, prophet_msg_list = game.night()
+        wolf_msg_list, prophet_msg_list = await game.night()
         for w in wolf_msg_list:
             await app.sendTempMessage(
                 w[0],

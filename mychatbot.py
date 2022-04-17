@@ -97,19 +97,20 @@ class Wmh:
         self.__init__()
 
     async def whowin(self):
-        rolelist = self.role_list
-        rolelist = set(rolelist)
-        if Role.werewolf not in rolelist:
-            await self.app.sendMessage(self.group, MessageChain.create("平民胜利！！！"))
-        elif Role.prophet not in rolelist and Role.villager not in rolelist:
-            await self.app.sendMessage(self.group, MessageChain.create("狼人胜利~"))
-        else:
-            return
-        temp = ["身份|名称"]
-        for i, player in enumerate(self.player_list):
-            temp.append("角色：" + str(self.originalrole[i].name) + " | " + str(player.name))
-        await self.app.sendMessage(self.group, MessageChain.create("\n".join(temp)))
-        self.endgame()
+        pass
+        # rolelist = self.role_list
+        # rolelist = set(rolelist)
+        # if Role.werewolf not in rolelist:
+        #     await self.app.sendMessage(self.group, MessageChain.create("平民胜利！！！"))
+        # elif Role.prophet not in rolelist and Role.villager not in rolelist:
+        #     await self.app.sendMessage(self.group, MessageChain.create("狼人胜利~"))
+        # else:
+        #     return
+        # temp = ["身份|名称"]
+        # for i, player in enumerate(self.player_list):
+        #     temp.append("角色：" + str(self.originalrole[i].name) + " | " + str(player.name))
+        # await self.app.sendMessage(self.group, MessageChain.create("\n".join(temp)))
+        # self.endgame()
 
     def isingame(self):
         if self.ingame:
@@ -158,7 +159,13 @@ class Wmh:
                 self.canactionlist.append(player.id)
         return temp
 
-    def night(self) -> [Member, MessageChain]:
+    async def night(self) -> [Member, MessageChain]:
+        await self.app.sendMessage(
+            self.group,
+            MessageChain.create("天黑啦"),
+        )
+        self.killlist = []
+        self.votelist = []
         self.canactionlist = []
         for i, player in enumerate(self.player_list):
             if self.role_list[i] != Role.deadman and self.role_list[i] != Role.villager:
@@ -188,6 +195,7 @@ class Wmh:
                     temp.append(id)
             if len(temp) == 0:
                 await self.app.sendMessage(self.group, MessageChain.create("昨晚无事发生~"))
+                self.stage = 1
                 self.killlist = []
                 await self.whowin()
                 return
@@ -220,6 +228,11 @@ class Wmh:
             res = self.refresh_player_in_game()
             await self.app.sendMessage(self.group, MessageChain.create(res))
             self.votelist = []
+        else:
+            await self.app.sendMessage(
+                self.group,
+                MessageChain.create(f"还有{votecount-len(self.role_list) + self.role_list.count(Role.deadman)}位玩家没有投票哦")
+            )
         await self.whowin()
 
     def canact(self, member):
