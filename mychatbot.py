@@ -87,10 +87,11 @@ class Chatbot:
             return str_out
 
         result = ["".join(result[0].path), "".join(result[1].path)]
-        for char in keepmsg:
-            result[0] = str_insert(result[0], char[0], char[1])
-            result[1] = str_insert(result[1], char[0], char[1])
-        return result[0] + "\n或者：" + result[1]
+        if result[0] != []:
+            for char in keepmsg:
+                result[0] = str_insert(result[0], char[0], char[1])
+                result[1] = str_insert(result[1], char[0], char[1])
+                return result[0] + "\n或者：" + result[1]
 
 
 class Wmh:

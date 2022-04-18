@@ -421,7 +421,7 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
     option = '0'
     endure = 10
     if "r18" in str(message.get(Plain))[13:-3]:
-        option = "1"
+        option = "0"
         endure = 5
     try:
         sess = requests.get(
@@ -435,7 +435,7 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
         )
         return
     imginfo = "标题: " + js["data"][0]["title"] + "\n" + "pid: " + str(js["data"][0]["pid"]) + "\n作者: " + js["data"][0][
-        "author"] + "\nuid: " + str(js["data"][0]["uid"]) + "\n原图链接: " + js["data"][0]["urls"]["original"]
+        "author"] + "\nuid: " + str(js["data"][0]["uid"])
     await app.sendMessage(
         group,
         MessageChain.create(imginfo),
