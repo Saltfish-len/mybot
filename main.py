@@ -12,7 +12,7 @@ from graia.ariadne.app import Ariadne
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, At, Image
 from graia.ariadne.message.parser.base import MentionMe, DetectPrefix, ContainKeyword, DetectSuffix
-from graia.ariadne.model import Friend, Group, MiraiSession, Member, MemberInfo
+from graia.ariadne.model import Friend, Group, MiraiSession, Member, MemberInfo, MemberPerm
 
 import mychatbot as ct
 
@@ -22,19 +22,25 @@ from graia.broadcast.interrupt import InterruptControl
 from graia.broadcast.interrupt.waiter import Waiter
 import re
 
+import battlefield
 
 loop = asyncio.new_event_loop()
 
-host = input("请输入HTTP API地址:")
-verifykey = input("请输入verifykey：")
-account = input("请输入QQ账号：")
+try:
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    host = config["host"]
+    verifykey = config["verifykey"]
+    account = config["account"]
+except IOError:
+    with open('config.json', 'w') as f:
+        json.dump({"host": "http://localhost:8080", "verifykey": "XXXX", "account": 114514}, f)
+    print(
+        "Fail to load config, config file has been created.\nPlease modify config.json and restart.\nPress enter to exit.")
+    input()
+    import sys
 
-if host == '':
-    host = "http://localhost:8080"
-if account == '':
-    account = 2706192373
-else:
-    account = int(account)
+    sys.exit()
 
 broadcast = Broadcast(loop=loop)
 app = Ariadne(
@@ -46,6 +52,9 @@ app = Ariadne(
     )
 )
 
+session = battlefield.get_session()
+serverid = battlefield.get_serverId(session, 7176779910897)
+
 bcc = app.broadcast
 app.count = 0
 
@@ -55,175 +64,176 @@ setucold = dict()
 
 inc = InterruptControl(bcc)
 
+
 # 狼人杀
-game = ct.Wmh()
+# game = ct.Wmh()
 
 
-@bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("杀人")])
-async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = DetectPrefix("/狼人杀")):
-    if game.stage == 1:
-        await app.sendMessage(player, MessageChain.create("光天化日之下不能杀人"))
-        return
-    if not game.canact(player):
-        await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
-        return
-    await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
-
-    @Waiter.create_using_function([TempMessage])
-    async def wolf_waiter(p: Member, m: MessageChain):
-        # 判断和处理
-        if p == player:
-            msg = str(m.get(Plain))[13:-3]
-            try:
-                targetid = int(msg)
-                return targetid  # 只要不是 None 就会继续执行
-            except:
-                return Force(None)
-
-    try:
-        res = await inc.wait(wolf_waiter, timeout=30)
-        game.killlist.append(res)
-        await app.sendMessage(
-            player,
-            MessageChain.create("投票成功：" + str(res))
-        )
-    except asyncio.TimeoutError:
-        await app.sendMessage(
-            player,
-            MessageChain.create("超时，默认弃票")
-        )
-        game.killlist.append(0)
-    finally:
-        await game.isnightfinish()
-
-
-@bcc.receiver(FriendMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("杀人")])
-async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = DetectPrefix("/狼人杀")):
-    if game.stage == 1:
-        await app.sendMessage(player, MessageChain.create("光天化日之下不能杀人"))
-        return
-    if not game.canact(player):
-        await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
-        return
-    await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
-
-    @Waiter.create_using_function([FriendMessage])
-    async def wolf_waiter(p: Friend, m: MessageChain):
-        # 判断和处理
-        if p == player:
-            msg = str(m.get(Plain))[13:-3]
-            try:
-                targetid = int(msg)
-                return targetid  # 只要不是 None 就会继续执行
-            except:
-                return Force(None)
-
-    try:
-        res = await inc.wait(wolf_waiter, timeout=30)
-        game.killlist.append(res)
-        await app.sendMessage(
-            player,
-            MessageChain.create("投票成功：" + str(res))
-        )
-    except asyncio.TimeoutError:
-        await app.sendMessage(
-            player,
-            MessageChain.create("超时，默认弃票")
-        )
-        game.killlist.append(0)
-    finally:
-        await game.isnightfinish()
-
-
-@bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("预言")])
-async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = DetectPrefix("/狼人杀")):
-    if game.stage == 1:
-        await app.sendMessage(player, MessageChain.create("光天化日之下不能预言"))
-        return
-    if not game.canact(player):
-        await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
-        return
-    await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
-
-    @Waiter.create_using_function([FriendMessage])
-    async def prophet_waiter(p: Friend, m: MessageChain):
-        # 判断和处理
-        if p == player:
-            msg = str(m.get(Plain))[13:-3]
-            try:
-                targetid = int(msg)
-
-                return targetid  # 只要不是 None 就会继续执行
-            except:
-                return Force(None)
-
-    try:
-        res = await inc.wait(prophet_waiter, timeout=30)
-        if res == 0:
-            await app.sendMessage(
-                player,
-                MessageChain.create("放弃预言啦")
-            )
-            game.killlist.append(0)
-            return
-        await app.sendMessage(
-            player,
-            MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))
-        )
-        game.killlist.append(0)
-    except asyncio.TimeoutError:
-        await app.sendMessage(
-            player,
-            MessageChain.create("超时，默认弃票")
-        )
-        game.killlist.append(0)
-    finally:
-        await game.isnightfinish()
-
-
-@bcc.receiver(FriendMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("预言")])
-async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = DetectPrefix("/狼人杀")):
-    if game.stage == 1:
-        await app.sendMessage(player, MessageChain.create("光天化日之下不能预言"))
-        return
-    if not game.canact(player):
-        await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
-        return
-    await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
-
-    @Waiter.create_using_function([FriendMessage])
-    async def prophet_waiter(p: Friend, m: MessageChain):
-        # 判断和处理
-        if p == player:
-            msg = str(m.get(Plain))[13:-3]
-            try:
-                targetid = int(msg)
-                return targetid  # 只要不是 None 就会继续执行
-            except:
-                return Force(None)
-
-    try:
-        res = await inc.wait(prophet_waiter, timeout=30)
-        if res == 0:
-            await app.sendMessage(
-                player,
-                MessageChain.create("放弃预言啦")
-            )
-            game.killlist.append(0)
-            return
-        await app.sendMessage(
-            player,
-            MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))
-        )
-        game.killlist.append(0)
-    except asyncio.TimeoutError:
-        await app.sendMessage(
-            player,
-            MessageChain.create("超时，默认弃票")
-        )
-        game.killlist.append(0)
-    finally:
-        await game.isnightfinish()
+# @bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("杀人")])
+# async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = DetectPrefix("/狼人杀")):
+#     if game.stage == 1:
+#         await app.sendMessage(player, MessageChain.create("光天化日之下不能杀人"))
+#         return
+#     if not game.canact(player):
+#         await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
+#         return
+#     await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
+#
+#     @Waiter.create_using_function([TempMessage])
+#     async def wolf_waiter(p: Member, m: MessageChain):
+#         # 判断和处理
+#         if p == player:
+#             msg = str(m.get(Plain))[13:-3]
+#             try:
+#                 targetid = int(msg)
+#                 return targetid  # 只要不是 None 就会继续执行
+#             except:
+#                 return Force(None)
+#
+#     try:
+#         res = await inc.wait(wolf_waiter, timeout=30)
+#         game.killlist.append(res)
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("投票成功：" + str(res))
+#         )
+#     except asyncio.TimeoutError:
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("超时，默认弃票")
+#         )
+#         game.killlist.append(0)
+#     finally:
+#         await game.isnightfinish()
+#
+#
+# @bcc.receiver(FriendMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("杀人")])
+# async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = DetectPrefix("/狼人杀")):
+#     if game.stage == 1:
+#         await app.sendMessage(player, MessageChain.create("光天化日之下不能杀人"))
+#         return
+#     if not game.canact(player):
+#         await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
+#         return
+#     await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
+#
+#     @Waiter.create_using_function([FriendMessage])
+#     async def wolf_waiter(p: Friend, m: MessageChain):
+#         # 判断和处理
+#         if p == player:
+#             msg = str(m.get(Plain))[13:-3]
+#             try:
+#                 targetid = int(msg)
+#                 return targetid  # 只要不是 None 就会继续执行
+#             except:
+#                 return Force(None)
+#
+#     try:
+#         res = await inc.wait(wolf_waiter, timeout=30)
+#         game.killlist.append(res)
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("投票成功：" + str(res))
+#         )
+#     except asyncio.TimeoutError:
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("超时，默认弃票")
+#         )
+#         game.killlist.append(0)
+#     finally:
+#         await game.isnightfinish()
+#
+#
+# @bcc.receiver(TempMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("预言")])
+# async def tempmsgforwmh(app: Ariadne, player: Member, message: MessageChain = DetectPrefix("/狼人杀")):
+#     if game.stage == 1:
+#         await app.sendMessage(player, MessageChain.create("光天化日之下不能预言"))
+#         return
+#     if not game.canact(player):
+#         await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
+#         return
+#     await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
+#
+#     @Waiter.create_using_function([FriendMessage])
+#     async def prophet_waiter(p: Friend, m: MessageChain):
+#         # 判断和处理
+#         if p == player:
+#             msg = str(m.get(Plain))[13:-3]
+#             try:
+#                 targetid = int(msg)
+#
+#                 return targetid  # 只要不是 None 就会继续执行
+#             except:
+#                 return Force(None)
+#
+#     try:
+#         res = await inc.wait(prophet_waiter, timeout=30)
+#         if res == 0:
+#             await app.sendMessage(
+#                 player,
+#                 MessageChain.create("放弃预言啦")
+#             )
+#             game.killlist.append(0)
+#             return
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))
+#         )
+#         game.killlist.append(0)
+#     except asyncio.TimeoutError:
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("超时，默认弃票")
+#         )
+#         game.killlist.append(0)
+#     finally:
+#         await game.isnightfinish()
+#
+#
+# @bcc.receiver(FriendMessage, decorators=[DetectPrefix("/狼人杀"), DetectSuffix("预言")])
+# async def tempmsgforwmh(app: Ariadne, player: Friend, message: MessageChain = DetectPrefix("/狼人杀")):
+#     if game.stage == 1:
+#         await app.sendMessage(player, MessageChain.create("光天化日之下不能预言"))
+#         return
+#     if not game.canact(player):
+#         await app.sendMessage(player, MessageChain.create("你不能这样操作哦~"))
+#         return
+#     await app.sendMessage(player, MessageChain.create("请直接输入id，如“1”"))
+#
+#     @Waiter.create_using_function([FriendMessage])
+#     async def prophet_waiter(p: Friend, m: MessageChain):
+#         # 判断和处理
+#         if p == player:
+#             msg = str(m.get(Plain))[13:-3]
+#             try:
+#                 targetid = int(msg)
+#                 return targetid  # 只要不是 None 就会继续执行
+#             except:
+#                 return Force(None)
+#
+#     try:
+#         res = await inc.wait(prophet_waiter, timeout=30)
+#         if res == 0:
+#             await app.sendMessage(
+#                 player,
+#                 MessageChain.create("放弃预言啦")
+#             )
+#             game.killlist.append(0)
+#             return
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("他是身份是：" + str(game.role_list[res - 1].name))
+#         )
+#         game.killlist.append(0)
+#     except asyncio.TimeoutError:
+#         await app.sendMessage(
+#             player,
+#             MessageChain.create("超时，默认弃票")
+#         )
+#         game.killlist.append(0)
+#     finally:
+#         await game.isnightfinish()
 
 
 @bcc.receiver(GroupMessage)
@@ -234,156 +244,159 @@ async def py2ch(app: Ariadne, group: Group, member: Member, message: MessageChai
     test = re.compile(u'[\u4e00-\u9fa5]')
     if testmgs.isalpha() and test.search(testmgs) is None:
         msg = msg.lower()
-        res = bot.pinyin2hanzi(msg.split(" "))
-        if res:
-            await app.sendMessage(
-                group,
-                MessageChain.create("他说：" + res),
-            )
-
-
-@bcc.receiver(
-    GroupMessage,
-    decorators=[DetectPrefix("/狼人杀")]
-)
-async def langrensha(app: Ariadne, group: Group, member: Member,
-                     message: MessageChain = DetectPrefix("/狼人杀")):
-    command = str(message.get(Plain))[13:-3]
-    if "新游戏" in command:
-        game.app = app
-        game.group = group
-        if game.ingame:
-            await app.sendMessage(
-                group,
-                game.isingame(),
-            )
-            return
-        else:
-            game.ingame = True
-            await app.sendMessage(
-                group,
-                MessageChain.create("开始游戏\n请发送：\n\"/狼人杀 加入\"\n加入游戏"),
-            )
-    if "加入" in command:
-        if not game.ingame:
-            await app.sendMessage(
-                group,
-                MessageChain.create(At(member), "\n未创建新游戏"),
-            )
-            return
         try:
-            if member in game.player_list:
+            res = bot.pinyin2hanzi(msg.split(" "))
+            if res:
                 await app.sendMessage(
                     group,
-                    MessageChain.create(At(member), "\n你已经在游戏中了"),
+                    MessageChain.create("他说：" + res),
                 )
-                return
-            if game.player_number >= 7:
-                await app.sendMessage(
-                    group,
-                    MessageChain.create(At(member), "\n人已经满啦~"),
-                )
-                return
-            game.joingame(member)
-            await app.sendMessage(
-                group,
-                MessageChain.create(At(member), "\n加入成功, 当前玩家数:" + str(game.player_number)),
-            )
         except:
-            await app.sendMessage(
-                group,
-                MessageChain.create(At(member), "\n加入失败, 寄"),
-            )
-    if "开始游戏" in command:
-        if game.player_number == 0:
-            await app.sendMessage(
-                group,
-                MessageChain.create("输入“/狼人杀 新游戏”来加入游戏")
-            )
             return
-        gmsg, pmsg, roles = game.startgame()
-        await app.sendMessage(
-            group,
-            gmsg
-        )
-        for player in game.player_list:
-            await app.sendMessage(
-                player,
-                pmsg
-            )
-        await app.sendMessage(
-            group,
-            MessageChain.create("正在分配身份……")
-        )
-        # 向玩家发送身份
-        for item in roles:
-            await app.sendTempMessage(
-                item[0],
-                item[1]
-            )
-        # 入夜
-        wolf_msg_list, prophet_msg_list = await game.night()
-        for w in wolf_msg_list:
-            await app.sendTempMessage(
-                w[0],
-                w[1]
-            )
-        for p in prophet_msg_list:
-            await app.sendTempMessage(
-                p[0],
-                p[1]
-            )
-    if "入夜" in command:
-        if game.stage == 0:
-            await app.sendMessage(
-                group,
-                MessageChain.create(At(member), "\n已经在晚上啦"),
-            )
-            return
-        wolf_msg_list, prophet_msg_list = await game.night()
-        for w in wolf_msg_list:
-            await app.sendTempMessage(
-                w[0],
-                w[1]
-            )
-        for p in prophet_msg_list:
-            await app.sendTempMessage(
-                p[0],
-                p[1]
-            )
-    if "结束游戏" in command:
-        if not game.ingame:
-            await app.sendMessage(
-                group,
-                MessageChain.create(At(member), "\n未创建新游戏"),
-            )
-            return
-        try:
-            game.endgame()
-            await app.sendMessage(
-                group,
-                MessageChain.create("结束成功"),
-            )
-        except:
-            await app.sendMessage(
-                group,
-                MessageChain.create("报错了，大寄特寄"),
-            )
 
 
-@bcc.receiver(
-    GroupMessage,
-    decorators=[DetectPrefix("/狼人杀 指认 ")]
-)
-async def zhiren(app: Ariadne, group: Group, member: Member,
-                 message: MessageChain = DetectPrefix("/狼人杀 指认 ")):
-    command = str(message.get(Plain))[13:-3]
-    try:
-        voteid = int(command)
-        game.votelist.append(voteid)
-        await game.isvotefinish()
-    except:
-        await app.sendMessage(group, MessageChain.create(At(member), "注意格式"))
+# @bcc.receiver(
+#     GroupMessage,
+#     decorators=[DetectPrefix("/狼人杀")]
+# )
+# async def langrensha(app: Ariadne, group: Group, member: Member,
+#                      message: MessageChain = DetectPrefix("/狼人杀")):
+#     command = str(message.get(Plain))[13:-3]
+#     if "新游戏" in command:
+#         game.app = app
+#         game.group = group
+#         if game.ingame:
+#             await app.sendMessage(
+#                 group,
+#                 game.isingame(),
+#             )
+#             return
+#         else:
+#             game.ingame = True
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create("开始游戏\n请发送：\n\"/狼人杀 加入\"\n加入游戏"),
+#             )
+#     if "加入" in command:
+#         if not game.ingame:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create(At(member), "\n未创建新游戏"),
+#             )
+#             return
+#         try:
+#             if member in game.player_list:
+#                 await app.sendMessage(
+#                     group,
+#                     MessageChain.create(At(member), "\n你已经在游戏中了"),
+#                 )
+#                 return
+#             if game.player_number >= 7:
+#                 await app.sendMessage(
+#                     group,
+#                     MessageChain.create(At(member), "\n人已经满啦~"),
+#                 )
+#                 return
+#             game.joingame(member)
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create(At(member), "\n加入成功, 当前玩家数:" + str(game.player_number)),
+#             )
+#         except:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create(At(member), "\n加入失败, 寄"),
+#             )
+#     if "开始游戏" in command:
+#         if game.player_number == 0:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create("输入“/狼人杀 新游戏”来加入游戏")
+#             )
+#             return
+#         gmsg, pmsg, roles = game.startgame()
+#         await app.sendMessage(
+#             group,
+#             gmsg
+#         )
+#         for player in game.player_list:
+#             await app.sendMessage(
+#                 player,
+#                 pmsg
+#             )
+#         await app.sendMessage(
+#             group,
+#             MessageChain.create("正在分配身份……")
+#         )
+#         # 向玩家发送身份
+#         for item in roles:
+#             await app.sendTempMessage(
+#                 item[0],
+#                 item[1]
+#             )
+#         # 入夜
+#         wolf_msg_list, prophet_msg_list = await game.night()
+#         for w in wolf_msg_list:
+#             await app.sendTempMessage(
+#                 w[0],
+#                 w[1]
+#             )
+#         for p in prophet_msg_list:
+#             await app.sendTempMessage(
+#                 p[0],
+#                 p[1]
+#             )
+#     if "入夜" in command:
+#         if game.stage == 0:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create(At(member), "\n已经在晚上啦"),
+#             )
+#             return
+#         wolf_msg_list, prophet_msg_list = await game.night()
+#         for w in wolf_msg_list:
+#             await app.sendTempMessage(
+#                 w[0],
+#                 w[1]
+#             )
+#         for p in prophet_msg_list:
+#             await app.sendTempMessage(
+#                 p[0],
+#                 p[1]
+#             )
+#     if "结束游戏" in command:
+#         if not game.ingame:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create(At(member), "\n未创建新游戏"),
+#             )
+#             return
+#         try:
+#             game.endgame()
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create("结束成功"),
+#             )
+#         except:
+#             await app.sendMessage(
+#                 group,
+#                 MessageChain.create("报错了，大寄特寄"),
+#             )
+#
+#
+# @bcc.receiver(
+#     GroupMessage,
+#     decorators=[DetectPrefix("/狼人杀 指认 ")]
+# )
+# async def zhiren(app: Ariadne, group: Group, member: Member,
+#                  message: MessageChain = DetectPrefix("/狼人杀 指认 ")):
+#     command = str(message.get(Plain))[13:-3]
+#     try:
+#         voteid = int(command)
+#         game.votelist.append(voteid)
+#         await game.isvotefinish()
+#     except:
+#         await app.sendMessage(group, MessageChain.create(At(member), "注意格式"))
 
 
 @bcc.receiver(
@@ -506,6 +519,111 @@ async def getup(app: Ariadne, event: NudgeEvent):
         )
     else:
         return
+
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[DetectPrefix(".+vip#2 ")]
+)
+async def add_vip(app: Ariadne, group: Group, member: Member,
+                  message: MessageChain = DetectPrefix(".+vip#2 ")):
+    per = member.permission.name
+    if group.id not in (940987081, 792678279):
+        return
+    if member.permission.name == "Member":
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"您没有权限呢~")
+        )
+        return
+    msg = str(message.get(Plain))[13:-3].split()
+    name = msg[0]
+    if msg[0] == msg[-1]:
+        days = float(365.0)
+    else:
+        days = float(msg[1])
+    res = battlefield.vip_add(session, serverid, name, days)
+    if res:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"成功添加{name},他的vip还有{int(res)}天。")
+        )
+    else:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"寄了")
+        )
+
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[DetectPrefix(".-vip#2 ")]
+)
+async def remove_vip(app: Ariadne, group: Group, member: Member,
+                     message: MessageChain = DetectPrefix(".-vip#2 ")):
+    per = member.permission.name
+    if group.id not in (940987081, 792678279):
+        return
+    if member.permission.name == "Member":
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"您没有权限呢~")
+        )
+        return
+    msg = str(message.get(Plain))[13:-3].split()
+    name = msg[0]
+    res = battlefield.vip_remove(session, serverid, name)
+    if res:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"成功移除{name}的vip。")
+        )
+    else:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"寄了")
+        )
+
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[DetectPrefix(".vip#2")]
+)
+async def list_vip(app: Ariadne, group: Group, member: Member,
+                   message: MessageChain = DetectPrefix(".vip#2")):
+    if group.id not in (940987081, 792678279):
+        return
+    res = battlefield.vip_list(session, serverid)
+    await app.sendGroupMessage(
+        group,
+        MessageChain.create(At(member), f"\n{res}")
+    )
+
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[DetectPrefix(".vipcheck#2")]
+)
+async def check_vip(app: Ariadne, group: Group, member: Member):
+    if group.id not in (940987081, 792678279):
+        return
+    if member.permission.name == "Member":
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"您没有权限呢~")
+        )
+        return
+    (res, count) = battlefield.vip_check(session, serverid)
+    if res == '':
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"\n清理成功~\n共清理了{count}位成员")
+        )
+    else:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"\n成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}")
+        )
 
 
 app.launch_blocking()
