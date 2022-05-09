@@ -13,13 +13,20 @@ from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, At, Image
 from graia.ariadne.message.parser.base import MentionMe, DetectPrefix, ContainKeyword, DetectSuffix
 from graia.ariadne.model import Friend, Group, MiraiSession, Member, MemberInfo, MemberPerm
+from graia.scheduler.timers import crontabify
 
 import mychatbot as ct
 
 import random
 
 from graia.broadcast.interrupt import InterruptControl
-from graia.broadcast.interrupt.waiter import Waiter
+
+from graia.scheduler import timers
+from graia.scheduler.saya import SchedulerSchema, GraiaSchedulerBehaviour
+
+
+from graia.scheduler import GraiaScheduler
+
 import re
 
 import battlefield
@@ -63,6 +70,7 @@ bot = ct.Chatbot()
 setucold = dict()
 
 inc = InterruptControl(bcc)
+
 
 
 # 狼人杀
@@ -624,6 +632,30 @@ async def check_vip(app: Ariadne, group: Group, member: Member):
             group,
             MessageChain.create(At(member), f"\n成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}")
         )
+
+
+scheduler = GraiaScheduler(loop=broadcast.loop, broadcast=broadcast)
+
+
+@scheduler.schedule(crontabify('0 0,12 * * * 0'))
+async def auto_check_vip(app: Ariadne):
+    grouplist = (940987081,792678279)
+    (res, count) = battlefield.vip_check(session, serverid)
+    for group in grouplist:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(f"正在执行自动vip清理……")
+        )
+        if res == '':
+            await app.sendGroupMessage(
+                group,
+                MessageChain.create(f"清理成功~\n共清理了{count}位成员")
+            )
+        else:
+            await app.sendGroupMessage(
+                group,
+                MessageChain.create(f"成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}")
+            )
 
 
 app.launch_blocking()
