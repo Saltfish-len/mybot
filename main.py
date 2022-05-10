@@ -24,7 +24,6 @@ from graia.broadcast.interrupt import InterruptControl
 from graia.scheduler import timers
 from graia.scheduler.saya import SchedulerSchema, GraiaSchedulerBehaviour
 
-
 from graia.scheduler import GraiaScheduler
 
 import re
@@ -60,8 +59,16 @@ app = Ariadne(
 )
 
 session = battlefield.get_session()
-serverid = battlefield.get_serverId(session, 7176779910897)
-
+gameids = [7151023600512, 7176779910897, ]  # 1服，2服
+serverids = []
+for id in gameids:
+    time.sleep(1)
+    serverid = battlefield.get_serverId(session, id)
+    if serverid:
+        serverids.append(serverid)
+        print(f"服务器https://battlefieldtracker.com/bf1/servers/pc/{id}初始化成功")
+    else:
+        print(f"服务器https://battlefieldtracker.com/bf1/servers/pc/{id}初始化失败！！！！")
 bcc = app.broadcast
 app.count = 0
 
@@ -70,7 +77,6 @@ bot = ct.Chatbot()
 setucold = dict()
 
 inc = InterruptControl(bcc)
-
 
 
 # 狼人杀
@@ -531,11 +537,10 @@ async def getup(app: Ariadne, event: NudgeEvent):
 
 @bcc.receiver(
     GroupMessage,
-    decorators=[DetectPrefix(".+vip#2 ")]
+    decorators=[DetectPrefix(".+vip#")]
 )
 async def add_vip(app: Ariadne, group: Group, member: Member,
-                  message: MessageChain = DetectPrefix(".+vip#2 ")):
-    per = member.permission.name
+                  message: MessageChain = DetectPrefix(".+vip#")):
     if group.id not in (940987081, 792678279):
         return
     if member.permission.name == "Member":
@@ -545,16 +550,27 @@ async def add_vip(app: Ariadne, group: Group, member: Member,
         )
         return
     msg = str(message.get(Plain))[13:-3].split()
+    try:
+        server = int(msg[0]) - 1
+        msg = msg[1:]
+    except:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"请输入服务器的数字编号")
+        )
+        return
     name = msg[0]
     if msg[0] == msg[-1]:
         days = float(365.0)
     else:
         days = float(msg[1])
-    res = battlefield.vip_add(session, serverid, name, days)
+    res = battlefield.vip_add(session, serverids[server], name, days)
     if res:
         await app.sendGroupMessage(
             group,
-            MessageChain.create(At(member), f"成功添加{name},他的vip还有{int(res)}天。")
+            MessageChain.create(At(member),
+                                f"成功添加{name},他的vip还有{int(res)}天。\n目标服务器为："
+                                f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}")
         )
     else:
         await app.sendGroupMessage(
@@ -565,11 +581,10 @@ async def add_vip(app: Ariadne, group: Group, member: Member,
 
 @bcc.receiver(
     GroupMessage,
-    decorators=[DetectPrefix(".-vip#2 ")]
+    decorators=[DetectPrefix(".-vip#")]
 )
 async def remove_vip(app: Ariadne, group: Group, member: Member,
-                     message: MessageChain = DetectPrefix(".-vip#2 ")):
-    per = member.permission.name
+                     message: MessageChain = DetectPrefix(".-vip#")):
     if group.id not in (940987081, 792678279):
         return
     if member.permission.name == "Member":
@@ -579,12 +594,22 @@ async def remove_vip(app: Ariadne, group: Group, member: Member,
         )
         return
     msg = str(message.get(Plain))[13:-3].split()
+    try:
+        server = int(msg[0]) - 1
+        msg = msg[1:]
+    except:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"请输入服务器的数字编号")
+        )
+        return
     name = msg[0]
-    res = battlefield.vip_remove(session, serverid, name)
+    res = battlefield.vip_remove(session, serverids[server], name)
     if res:
         await app.sendGroupMessage(
             group,
-            MessageChain.create(At(member), f"成功移除{name}的vip。")
+            MessageChain.create(At(member), f"成功移除{name}的vip。\n目标服务器为："
+                                            f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}")
         )
     else:
         await app.sendGroupMessage(
@@ -595,24 +620,37 @@ async def remove_vip(app: Ariadne, group: Group, member: Member,
 
 @bcc.receiver(
     GroupMessage,
-    decorators=[DetectPrefix(".vip#2")]
+    decorators=[DetectPrefix(".vip#")]
 )
 async def list_vip(app: Ariadne, group: Group, member: Member,
-                   message: MessageChain = DetectPrefix(".vip#2")):
+                   message: MessageChain = DetectPrefix(".vip#")):
     if group.id not in (940987081, 792678279):
         return
-    res = battlefield.vip_list(session, serverid)
+    msg = str(message.get(Plain))[13:-3].split()
+    try:
+        server = int(msg[0]) - 1
+
+    except:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"请输入服务器的数字编号")
+        )
+        return
+
+
+    res = battlefield.vip_list(session, serverids[server])
     await app.sendGroupMessage(
         group,
-        MessageChain.create(At(member), f"\n{res}")
+        MessageChain.create(At(member), f"查询服务器："
+                                        f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}\n{res}")
     )
 
 
 @bcc.receiver(
     GroupMessage,
-    decorators=[DetectPrefix(".vipcheck#2")]
+    decorators=[DetectPrefix(".vipcheck#")]
 )
-async def check_vip(app: Ariadne, group: Group, member: Member):
+async def check_vip(app: Ariadne, group: Group, member: Member, message: MessageChain = DetectPrefix(".vipcheck#")):
     if group.id not in (940987081, 792678279):
         return
     if member.permission.name == "Member":
@@ -621,17 +659,55 @@ async def check_vip(app: Ariadne, group: Group, member: Member):
             MessageChain.create(At(member), f"您没有权限呢~")
         )
         return
-    (res, count) = battlefield.vip_check(session, serverid)
+    msg = str(message.get(Plain))[13:-3].split()
+    try:
+        server = int(msg[0]) - 1
+    except:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"请输入服务器的数字编号")
+        )
+        return
+
+    (res, count) = battlefield.vip_check(session, serverids[server])
     if res == '':
         await app.sendGroupMessage(
             group,
-            MessageChain.create(At(member), f"\n清理成功~\n共清理了{count}位成员")
+            MessageChain.create(At(member), f"\n清理成功~\n共清理了{count}位成员\n目标服务器为："
+                                            f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}")
         )
     else:
         await app.sendGroupMessage(
             group,
-            MessageChain.create(At(member), f"\n成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}")
+            MessageChain.create(At(member), f"\n成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}\n目标服务器为："
+                                            f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}")
         )
+
+@bcc.receiver(
+    GroupMessage,
+    decorators=[DetectPrefix(".vipinit")]
+)
+async def check_vip(app: Ariadne, group: Group, member: Member,):
+    if group.id not in (940987081, 792678279):
+        return
+    if member.permission.name == "Member":
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"您没有权限呢~")
+        )
+        return
+    session = battlefield.get_session()
+    serverids = []
+    for id in gameids:
+        time.sleep(0.5)
+        serverid = battlefield.get_serverId(session, id)
+        if serverid:
+            serverids.append(serverid)
+            await app.sendGroupMessage(
+                group,
+                MessageChain.create(At(member), f"服务器https://battlefieldtracker.com/bf1/servers/pc/{id}初始化成功")
+            )
+        await asyncio.sleep(0.5)
 
 
 scheduler = GraiaScheduler(loop=broadcast.loop, broadcast=broadcast)
@@ -639,23 +715,27 @@ scheduler = GraiaScheduler(loop=broadcast.loop, broadcast=broadcast)
 
 @scheduler.schedule(crontabify('0 0,12 * * * 0'))
 async def auto_check_vip(app: Ariadne):
-    grouplist = (940987081,792678279)
-    (res, count) = battlefield.vip_check(session, serverid)
+    grouplist = (940987081, 792678279)
     for group in grouplist:
         await app.sendGroupMessage(
             group,
             MessageChain.create(f"正在执行自动vip清理……")
         )
-        if res == '':
-            await app.sendGroupMessage(
-                group,
-                MessageChain.create(f"清理成功~\n共清理了{count}位成员")
-            )
-        else:
-            await app.sendGroupMessage(
-                group,
-                MessageChain.create(f"成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}")
-            )
+        for idx, serverid in enumerate(serverids):
+            (res, count) = battlefield.vip_check(session, serverid)
+            if res == '':
+                await app.sendGroupMessage(
+                    group,
+                    MessageChain.create(f"清理成功~\n共清理了{count}位成员\n目标服务器为："
+                                        f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[idx]}")
+                )
+            else:
+                await app.sendGroupMessage(
+                    group,
+                    MessageChain.create(f"成功清理了{count}位成员\n但以下玩家vip已到期但移除失败\n{res}\n目标服务器为："
+                                        f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[idx]}")
+                )
+        await asyncio.sleep(0.5)
 
 
 app.launch_blocking()

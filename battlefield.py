@@ -53,13 +53,13 @@ def get_session():
                 "locale": "zh-tw"})
             with open('bf1config.json', 'w') as f:
                 json.dump({"remid": remid, "sid": sid, "session": content["result"]["sessionId"],
-                           "sessiontime": time.time(), "serverId": 0, "viplist": {}}, f)
+                           "sessiontime": time.time(), "serverId": {}, "viplist": {}}, f)
             print("session updated")
             return content["result"]["sessionId"]
     except IOError:
         with open('bf1config.json', 'w') as f:
             json.dump({"remid": "xxxx", "sid": "XXXX", "session": "no need to modify, sessiontime also.",
-                       "sessiontime": 0000, "serverId": 0, "viplist": {}}, f)
+                       "sessiontime": 0000, "serverId": {}, "viplist": {}}, f)
         print(
             "Fail to load config, config file has been created.\nPlease modify config.json and restart.\nPress enter to exit.")
 
@@ -83,8 +83,8 @@ def get_personaId(personaName):
 def get_serverId(session, gameId):
     with open('bf1config.json', 'r') as f:
         config = json.load(f)
-    serverId = config["serverId"]
-    if serverId:
+    if gameId in config["serverId"].keys():
+        serverId = config["serverId"][str(gameId)]
         return serverId
     else:
         response = fetch_BF1_Api("GameServer.getFullServerDetails", sessionId=session, params={"game": "tunguska",
@@ -92,7 +92,9 @@ def get_serverId(session, gameId):
                                                                                                })
         if response:
             serverId = response["result"]["rspInfo"]["server"]["serverId"]
-            config["serverId"] = serverId
+            config["serverId"][gameId] = serverId
+            if str(serverId) not in config["viplist"].keys():
+                config["viplist"][str(serverId)] = {}
             with open('bf1config.json', 'w') as f:
                 json.dump(config, f)
             return serverId
@@ -102,17 +104,18 @@ def vip_add(session, serverId, personaName, days):
     personaName = personaName.lower()
     with open('bf1config.json', 'r') as f:
         config = json.load(f)
-    if personaName in config["viplist"].keys():
-        config["viplist"][personaName] += days * 3600 * 24
+
+    if personaName in config["viplist"][str(serverId)].keys():
+        config["viplist"][str(serverId)][personaName] += days * 3600 * 24
     else:
         response = fetch_BF1_Api("RSP.addServerVip", sessionId=session, params={"game": "tunguska",
                                                                                 "serverId": serverId,
                                                                                 "personaName": personaName,
                                                                                 })
-        config["viplist"][personaName] = time.time() + days * 3600 * 24
+        config["viplist"][str(serverId)][personaName] = time.time() + days * 3600 * 24
     with open('bf1config.json', 'w') as f:
         json.dump(config, f)
-    return (config["viplist"][personaName] - time.time()) // (3600 * 24)
+    return (config["viplist"][str(serverId)][personaName] - time.time()) // (3600 * 24)
 
 
 def vip_remove(session, serverId, personaName):
@@ -124,8 +127,8 @@ def vip_remove(session, serverId, personaName):
     if response:
         with open('bf1config.json', 'r') as f:
             config = json.load(f)
-        if personaName in config["viplist"].keys():
-            config["viplist"].pop(personaName)
+        if personaName in config["viplist"][str(serverId)].keys():
+            config["viplist"][str(serverId)].pop(personaName)
         with open('bf1config.json', 'w') as f:
             json.dump(config, f)
         return True
@@ -143,13 +146,15 @@ def vip_list(session, serverId):
 def vip_check(session, serverId):
     with open('bf1config.json', 'r') as f:
         config = json.load(f)
+    with open(fr"backup/{int(time.time())}.json","w") as f:
+        json.dump(config,f)
     res = []
     count = 0
-    config_copy = config["viplist"].copy()
+    config_copy = config["viplist"][str(serverId)].copy()
     for personaName, due_time in config_copy.items():
         if time.time() > due_time:
             if vip_remove(session, serverId, personaName):
-                config["viplist"].pop(personaName)
+                config["viplist"][str(serverId)].pop(personaName)
                 count += 1
                 time.sleep(0.1)
             else:
