@@ -3,7 +3,6 @@ import time
 from enum import Enum
 import random
 
-
 from Pinyin2Hanzi import DefaultHmmParams, DefaultDagParams
 from Pinyin2Hanzi import viterbi, dag
 from Pinyin2Hanzi import is_pinyin, simplify_pinyin
@@ -92,7 +91,6 @@ class Chatbot:
                 result[0] = str_insert(result[0], char[0], char[1])
                 result[1] = str_insert(result[1], char[0], char[1])
             return result[0] + "\n或者：" + result[1]
-
 
 # class Wmh:
 #     # Werewolves of Miller's Hollow:

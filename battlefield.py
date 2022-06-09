@@ -18,9 +18,9 @@ def fetch_BF1_Api(method, sessionId=None, params=None):
     if sessionId is not None:
         headers["X-GatewaySession"] = sessionId
     response = requests.post(url=base_url, headers=headers, data=json.dumps(body))
-    res = json.loads(str(response.content, encoding="utf-8"))
-    if "error" in res.keys():
+    if response.status_code != 200:
         return None
+    res = json.loads(str(response.content, encoding="utf-8"))
     return res
 
 
@@ -39,23 +39,20 @@ def get_session():
         sid = config["sid"]
         session = config["session"]
         sessiontime = config["sessiontime"]
-        if check_session_time():
-            return session
-        else:
-            base_url = "https://accounts.ea.com/connect/auth?response_type=code&locale=zh_CN&client_id=sparta-backend-as-user-pc"
-            cookie = {"remind": remid, "sid": sid}
-            response = requests.get(base_url, cookies=cookie, allow_redirects=False)
-            if response.content != b'':
-                return None
-            authCode = str(response.headers["location"][30:])
-            content = fetch_BF1_Api("Authentication.getEnvIdViaAuthCode", params={
-                "authCode": authCode,
-                "locale": "zh-tw"})
-            with open('bf1config.json', 'w') as f:
-                json.dump({"remid": remid, "sid": sid, "session": content["result"]["sessionId"],
-                           "sessiontime": time.time(), "serverId": {}, "viplist": {}}, f)
-            print("session updated")
-            return content["result"]["sessionId"]
+        base_url = "https://accounts.ea.com/connect/auth?response_type=code&locale=zh_CN&client_id=sparta-backend-as-user-pc"
+        cookie = {"remind": remid, "sid": sid}
+        response = requests.get(base_url, cookies=cookie, allow_redirects=False)
+
+        authCode = str(response.headers["location"][30:])
+        content = fetch_BF1_Api("Authentication.getEnvIdViaAuthCode", params={
+            "authCode": authCode,
+            "locale": "zh-tw"})
+        config["session"] = session
+        config["sessiontime"] = time.time() + 12*3600
+        with open('bf1config.json', 'w') as f:
+            json.dump(config, f)
+        print("session updated")
+        return content["result"]["sessionId"]
     except IOError:
         with open('bf1config.json', 'w') as f:
             json.dump({"remid": "xxxx", "sid": "XXXX", "session": "no need to modify, sessiontime also.",
@@ -83,7 +80,7 @@ def get_personaId(personaName):
 def get_serverId(session, gameId):
     with open('bf1config.json', 'r') as f:
         config = json.load(f)
-    if gameId in config["serverId"].keys():
+    if str(gameId) in config["serverId"].keys():
         serverId = config["serverId"][str(gameId)]
         return serverId
     else:
@@ -99,6 +96,20 @@ def get_serverId(session, gameId):
                 json.dump(config, f)
             return serverId
 
+def list_player(gameId):
+    baseurl = f"https://api.gametools.network/bf1/players/?gameid={gameId}"
+    response = requests.get(baseurl)
+    if response.status_code != 200:
+        return None
+    res = response.json()
+    map = res["serverinfo"]["level"][3:]
+    team_one_name = res["teams"][0]["key"]
+    team_one_players = res["teams"][0]["players"]
+    team_two_name = res["teams"][1]["key"]
+    team_two_players = res["teams"][1]["players"]
+    return map,(team_one_name,team_two_name),(team_one_players,team_two_players)
+
+
 
 def vip_add(session, serverId, personaName, days):
     personaName = personaName.lower()
@@ -112,6 +123,8 @@ def vip_add(session, serverId, personaName, days):
                                                                                 "serverId": serverId,
                                                                                 "personaName": personaName,
                                                                                 })
+        if response is None:
+            return None
         config["viplist"][str(serverId)][personaName] = time.time() + days * 3600 * 24
     with open('bf1config.json', 'w') as f:
         json.dump(config, f)
@@ -164,6 +177,6 @@ def vip_check(session, serverId):
         json.dump(config, f)
     return ("\n".join(res),count)
 
-session = get_session()
-serverid = get_serverId(session, 7176779910897)
-print(session)
+
+if __name__ == "__main__":
+    list_player(7176779910897)

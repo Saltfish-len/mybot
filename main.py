@@ -19,7 +19,7 @@ import mychatbot as ct
 
 import random
 
-from graia.broadcast.interrupt import InterruptControl
+from graia.broadcast.interrupt import InterruptControl, Waiter
 
 from graia.scheduler import timers
 from graia.scheduler.saya import SchedulerSchema, GraiaSchedulerBehaviour
@@ -445,14 +445,11 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
         group,
         MessageChain.create(At(member), "\n少女祈祷中ing"),
     )
-    option = '0'
     endure = 10
-    if "r18" in str(message.get(Plain))[13:-3]:
-        option = "0"
-        endure = 5
+    option = str(message.get(Plain))[13:-3].lstrip()
     try:
         sess = requests.get(
-            'https://api.lolicon.app/setu/v2?proxy=i.pixiv.re' + "&r18=" + option)
+            'https://api.lolicon.app/setu/v2?proxy=i.pixiv.re' + "&r18=0&tag=" + option)
         js = sess.text
         js = json.loads(js)
     except:
@@ -468,9 +465,9 @@ async def setu(app: Ariadne, group: Group, member: Member, message: MessageChain
         MessageChain.create(imginfo),
     )
     imgurl = js["data"][0]["urls"]["original"]
-    session = get_running(Adapter).session
+    setusession = get_running(Adapter).session
     try:
-        async with session.get(imgurl) as r:
+        async with setusession.get(imgurl) as r:
             imgdata = await r.read()
         msg = await app.sendMessage(
             group,
@@ -620,6 +617,48 @@ async def remove_vip(app: Ariadne, group: Group, member: Member,
 
 @bcc.receiver(
     GroupMessage,
+    decorators=[DetectPrefix(".server#")]
+)
+async def player_in_server(app: Ariadne, group: Group, member: Member,
+                           message: MessageChain = DetectPrefix(".server#")):
+    if group.id not in (940987081, 792678279):
+        return
+    msg = str(message.get(Plain))[13:-3].split()
+    try:
+        server = int(msg[0]) - 1
+    except:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"请输入服务器的数字编号")
+        )
+        return
+    res = battlefield.list_player(gameids[server])
+    if res:
+        map, team_name, player_list = res
+        one_player = '\n'.join([str(i + 1) + ": " + name for i, name in enumerate(player_list[0])])
+        two_player = '\n'.join(
+            [str(i + len(player_list[0] + 1)) + ": " + name for i, name in enumerate(player_list[1])])
+
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"\n当前地图为{map}"
+                                            f"\n人数为{len(player_list[0]) + len(player_list[1])}\n{team_name[0]}:\n"
+                                            f"{one_player}"
+                                            f"{team_name[1]}:\n"
+                                            f"{two_player}"
+                                )
+        )
+
+
+    else:
+        await app.sendGroupMessage(
+            group,
+            MessageChain.create(At(member), f"寄了")
+        )
+
+
+@bcc.receiver(
+    GroupMessage,
     decorators=[DetectPrefix(".vip#")]
 )
 async def list_vip(app: Ariadne, group: Group, member: Member,
@@ -636,7 +675,6 @@ async def list_vip(app: Ariadne, group: Group, member: Member,
             MessageChain.create(At(member), f"请输入服务器的数字编号")
         )
         return
-
 
     res = battlefield.vip_list(session, serverids[server])
     await app.sendGroupMessage(
@@ -683,11 +721,12 @@ async def check_vip(app: Ariadne, group: Group, member: Member, message: Message
                                             f"\nhttps://battlefieldtracker.com/bf1/servers/pc/{gameids[server]}")
         )
 
+
 @bcc.receiver(
     GroupMessage,
     decorators=[DetectPrefix(".vipinit")]
 )
-async def check_vip(app: Ariadne, group: Group, member: Member,):
+async def check_vip(app: Ariadne, group: Group, member: Member, ):
     if group.id not in (940987081, 792678279):
         return
     if member.permission.name == "Member":
@@ -696,6 +735,7 @@ async def check_vip(app: Ariadne, group: Group, member: Member,):
             MessageChain.create(At(member), f"您没有权限呢~")
         )
         return
+    global session
     session = battlefield.get_session()
     serverids = []
     for id in gameids:
@@ -716,6 +756,8 @@ scheduler = GraiaScheduler(loop=broadcast.loop, broadcast=broadcast)
 @scheduler.schedule(crontabify('0 0,12 * * * 0'))
 async def auto_check_vip(app: Ariadne):
     grouplist = (940987081, 792678279)
+    global session
+    session = battlefield.get_session()
     for group in grouplist:
         await app.sendGroupMessage(
             group,
