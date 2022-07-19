@@ -1,7 +1,3 @@
-class Chess_type:
-    pass
-
-
 class Chessman:
     def __init__(self, x, y, c_type, side, display):
         self.x = x
